@@ -62,7 +62,7 @@
     {"id": "hamburg", "name": "Hamburg", "cc": "DE", "lat": 53.5530, "lon": 10.0067, "air": ["HAM"], "start": true},
     {"id": "vienna", "name": "Vienna", "cc": "AT", "lat": 48.1852, "lon": 16.3776, "air": ["VIE"], "start": true},
     {"id": "frankfurt", "name": "Frankfurt", "cc": "DE", "lat": 50.1071, "lon": 8.6638, "air": ["FRA"], "start": true},
-    {"id": "munich", "name": "Munich", "cc": "DE", "lat": 48.1402, "lon": 11.5586, "air": ["MUC"]},
+    {"id": "munich", "name": "Munich", "cc": "DE", "lat": 48.1402, "lon": 11.5586, "air": ["MUC"], "start": true},
     {"id": "cologne", "name": "Cologne", "cc": "DE", "lat": 50.9430, "lon": 6.9589, "air": ["CGN"]},
     {"id": "stuttgart", "name": "Stuttgart", "cc": "DE", "lat": 48.7841, "lon": 9.1816, "air": ["STR"]},
     {"id": "leipzig", "name": "Leipzig", "cc": "DE", "lat": 51.3455, "lon": 12.3821, "air": ["LEJ"]},
