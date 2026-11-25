@@ -69,7 +69,7 @@ td a { color:var(--home); }
 </main>
 <script src="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js"></script>
 <script>
-const RANKS = { total: "Shortest total", fair: "Fairest", price: "Cheapest (estimate)" };
+const RANKS = { total: "Shortest total", fair: "Fairest" };
 const MODES = { both: "Train or plane", train: "Train only" };
 const SHOW = 15, PLANE_MUST_SAVE = 30;
 let data, map, pins = [], selected = null;
@@ -100,7 +100,7 @@ function option(from, to) {
   const t = data.trips[from][to], opts = [];
   if (t.train) opts.push({ ...t.train, kind: "train" });
   if (t.flight && state.mode === "both") opts.push({ ...t.flight, kind: "flight" });
-  const score = o => state.rank === "price" ? o.est : o.min + (o.kind === "flight" && t.train ? PLANE_MUST_SAVE : 0);
+  const score = o => o.min + (o.kind === "flight" && t.train ? PLANE_MUST_SAVE : 0);
   return opts.sort((a, b) => score(a) - score(b))[0] || null;
 }
 function ranking() {
@@ -113,7 +113,7 @@ function ranking() {
       price: legs.reduce((s, l) => s + l.n * l.o.est, 0),
       max: Math.max(...legs.map(l => l.o.min)) });
   }
-  const keys = { total: ["total", "max"], fair: ["max", "total"], price: ["price", "total"] }[state.rank];
+  const keys = { total: ["total", "max"], fair: ["max", "total"] }[state.rank];
   return out.sort((a, b) => a[keys[0]] - b[keys[0]] || a[keys[1]] - b[keys[1]]);
 }
 
@@ -185,7 +185,7 @@ function notes() {
   box.append(
     el("p", {}, `Times are one way. Trains show the fastest connection found for ${data.travel_date}, from city centre or main station, and the same time is used in both directions. Timetable data: `, link("Transitous and its sources", "https://transitous.org/sources/"), "."),
     el("p", {}, `Plane times are estimates: the way to the airport (six of them set by hand: Lille, Luxembourg, Prague, Milan Malpensa, Milan Linate, Venice), 90 minutes before departure, flight time from distance, 30 minutes after landing, and the way into town. A plane is suggested only if it saves at least 30 minutes. Only direct routes that carried passengers in ${data.eurostat_year} are used (`, link("Eurostat", "https://ec.europa.eu/eurostat/databrowser/view/avia_par_de/default/table"), "), so some may have changed. Airports: ", link("OurAirports", "https://ourairports.com/data/"), "."),
-    el("p", {}, "Prices marked “about” are rough guesses from distance, not fares. Price ranges on French routes come from ", link("SNCF open data", "https://ressources.data.sncf.com/explore/dataset/tarifs-tgv-inoui-ouigo/"), " (ODbL); their midpoint counts in the ranking. Use “check live” before deciding."),
+    el("p", {}, "Prices marked “about” are rough guesses from distance, not fares. Price ranges on French routes come from ", link("SNCF open data", "https://ressources.data.sncf.com/explore/dataset/tarifs-tgv-inoui-ouigo/"), " (ODbL); their midpoint counts in the total. Prices do not affect the ranking. Use “check live” before deciding."),
     el("p", {}, `Data built ${data.built}. Non-commercial. Your group is stored only in the link, not on a server. `, link("Support Transitous", "https://transitous.org/"), "."));
 }
 
