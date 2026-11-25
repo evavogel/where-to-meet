@@ -6,54 +6,67 @@
 <title>Where to Meet</title>
 <link rel="stylesheet" href="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css">
 <style>
-:root { --bg:#f6f4ef; --card:#fffdf9; --ink:#22303a; --soft:#5d6b74; --line:#ddd7cb; --accent:#b4442c; --accent-ink:#fff; --home:#1f5f7a; }
-@media (prefers-color-scheme: dark) {
-  :root { --bg:#172027; --card:#1f2a32; --ink:#e9e6df; --soft:#a3afb7; --line:#33414b; --accent:#e07a5f; --accent-ink:#1b1410; --home:#7cc0dc; }
-}
+:root { color-scheme:light; --bg:#fff1e2; --card:#fff9f1; --ink:#43102f; --soft:#7a3b57; --line:#ffc2ae; --orange:#ffb162; --coral:#ff8f7f; --pink:#fe708f; --salmon:#ffb4a8; --magenta:#b8124f; --yellow:#ffcf70; --grain:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='240' height='240'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.8' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 .26 0 0 0 0 .06 0 0 0 0 .18 0 0 0 .9 -.28'/%3E%3C/filter%3E%3Crect width='240' height='240' filter='url(%23n)'/%3E%3C/svg%3E"); }
 * { box-sizing:border-box; }
-body { margin:0; background:var(--bg); color:var(--ink); font:16px/1.45 system-ui, sans-serif; }
-main { display:grid; grid-template-columns:minmax(340px, 440px) 1fr; height:100vh; }
-#panel { overflow-y:auto; padding:20px 16px 32px; }
-#map { height:100%; min-height:320px; background:var(--line); }
-h1 { font-size:1.6rem; margin:0 0 4px; letter-spacing:-.01em; }
-h2 { font-size:.95rem; margin:20px 0 8px; }
+body { margin:0; background:var(--orange) url("art.webp") center / cover fixed; color:var(--ink); font:16px/1.45 system-ui, sans-serif; }
+main { display:grid; grid-template-columns:minmax(360px, 430px) 1fr; gap:36px; padding:36px; height:100vh; }
+#panel { overflow-y:auto; display:flex; flex-direction:column; background:var(--bg); border-radius:14px; box-shadow:0 6px 22px #43102f40; }
+#body { padding:14px 18px 28px; background:var(--grain); background-color:var(--bg); background-blend-mode:soft-light; border-radius:0 0 14px 14px; }
+#mapwrap { position:relative; min-width:0; padding:14px; background:#fffaf1; border-radius:4px; box-shadow:0 8px 26px #43102f55; }
+#map { height:100%; min-height:320px; background:#ffd9c9; }
+#hero { position:relative; flex:none; padding:26px 18px 190px; background:var(--orange) url("hero.webp") 30% bottom / cover; border-radius:14px 14px 0 0; }
+#film { position:absolute; inset:14px; pointer-events:none; overflow:hidden; z-index:2; background:radial-gradient(60% 80% at 100% 0%, #ff8a2b66, transparent 70%), radial-gradient(35% 90% at 0% 100%, #fe708f59, transparent 75%), radial-gradient(120% 120% at 50% 50%, transparent 58%, #43102f4d 100%); }
+#film::before { content:""; position:absolute; inset:0; background:var(--grain); opacity:.34; mix-blend-mode:multiply; }
+#stamp { position:absolute; left:18px; top:18px; font:600 18px/1 "Courier New", monospace; letter-spacing:.12em; color:#ff7a1a; text-shadow:0 0 6px #ffb16299, 0 0 1px #fff; }
+.maplibregl-canvas { filter:saturate(1.1) contrast(.92) brightness(1.03) sepia(.14); }
+h1 { position:relative; z-index:1; font:800 2.5rem/1 ui-rounded, "Arial Rounded MT Bold", "Trebuchet MS", system-ui, sans-serif; letter-spacing:-.03em; margin:0 0 10px; }
+#hero p { position:relative; z-index:1; color:var(--ink); font-weight:500; max-width:30ch; }
+h2 { font:700 1rem/1.3 ui-rounded, "Arial Rounded MT Bold", "Trebuchet MS", system-ui, sans-serif; margin:20px 0 8px; }
 p { margin:0 0 8px; color:var(--soft); }
 button, a { font:inherit; }
-button { cursor:pointer; color:inherit; background:var(--card); border:1px solid var(--line); border-radius:8px; padding:6px 10px; min-height:36px; }
-button[aria-pressed="true"] { background:var(--accent); border-color:var(--accent); color:var(--accent-ink); }
-:focus-visible { outline:2px solid var(--home); outline-offset:2px; }
-#starts { display:grid; grid-template-columns:repeat(auto-fit, minmax(150px, 1fr)); gap:6px; }
-.start { min-width:0; display:flex; align-items:center; justify-content:space-between; background:var(--card); border:1px solid var(--line); border-radius:8px; padding:4px 4px 4px 8px; }
+button { cursor:pointer; color:inherit; background:var(--card); border:2px solid var(--line); border-radius:999px; padding:6px 14px; min-height:38px; }
+button:hover { border-color:var(--pink); }
+button[aria-pressed="true"] { background:var(--pink); border-color:transparent; background-origin:border-box; font-weight:600; }
+:focus-visible { outline:3px solid var(--magenta); outline-offset:2px; }
+#starts { display:grid; grid-template-columns:repeat(auto-fit, minmax(150px, 1fr)); gap:8px; }
+.start { min-width:0; display:flex; align-items:center; justify-content:space-between; background:var(--card); border:2px solid var(--line); border-radius:22px; padding:4px 4px 4px 12px; }
 .start > span:first-child { min-width:0; overflow:hidden; text-overflow:ellipsis; }
-.start.on { border-color:var(--home); }
-.start span.ctl { display:flex; align-items:center; gap:4px; }
+.start.on { border-color:var(--pink); background:#ffdfdb; }
+.start span.ctl { display:flex; align-items:center; gap:3px; }
 .start b { min-width:1.2em; text-align:center; font-variant-numeric:tabular-nums; }
-.start button { min-width:36px; padding:0; }
-.row { display:flex; flex-wrap:wrap; gap:6px; }
-ol { list-style:none; margin:0; padding:0; }
-li { border-bottom:1px solid var(--line); }
-li > button { width:100%; text-align:left; background:none; border:0; border-radius:0; padding:10px 0; display:grid; grid-template-columns:2em 1fr auto; gap:6px; align-items:baseline; }
-li .name { font-weight:600; }
-li .num { font-variant-numeric:tabular-nums; white-space:nowrap; text-align:right; }
+.start button { min-width:34px; min-height:34px; padding:0; border-color:transparent; background:#ffd8c4; }
+.start button:hover { background:var(--yellow); }
+.row { display:flex; flex-wrap:wrap; gap:8px; }
+ol { list-style:none; margin:0 0 16px; padding:0; }
+li { border-bottom:2px solid var(--line); }
+li > button { width:100%; text-align:left; background:none; border:0; border-radius:0; padding:10px 0; display:grid; grid-template-columns:2.4em 1fr auto; gap:6px; align-items:center; }
+li > button > span:first-child { width:30px; height:30px; border-radius:50%; display:grid; place-items:center; font-weight:700; background:#ffd8c4; }
+li:nth-child(1) > button > span:first-child { background:var(--orange); }
+li:nth-child(2) > button > span:first-child { background:var(--pink); }
+li:nth-child(3) > button > span:first-child { background:var(--salmon); }
+li .name { font-weight:700; }
+li .num { font-variant-numeric:tabular-nums; white-space:nowrap; text-align:right; font-weight:600; }
 li small { color:var(--soft); display:block; font-weight:400; }
 table { width:100%; border-collapse:collapse; font-size:.9rem; margin:0 0 12px; }
-td { padding:4px 8px 4px 0; vertical-align:top; border-top:1px dotted var(--line); }
+td { padding:4px 8px 4px 0; vertical-align:top; border-top:1px dotted var(--coral); }
 td:nth-child(2) { white-space:nowrap; font-variant-numeric:tabular-nums; }
-td a { color:var(--home); }
+td a, #notes a { color:var(--magenta); }
 #notes { font-size:.85rem; }
-#notes a { color:var(--home); }
-.pin { width:26px; height:26px; border-radius:50%; background:var(--accent); color:var(--accent-ink); border:2px solid var(--card); font:600 12px/1 system-ui; display:grid; place-items:center; padding:0; min-height:0; }
-.pin.sel { outline:3px solid var(--home); }
-.pin.home { background:var(--home); color:var(--card); border-radius:6px; }
-@media (max-width:420px) { .start { font-size:.9rem; } .start button { min-width:30px; } .start span.ctl { gap:1px; } }
-@media (max-width:800px) { main { display:block; height:auto; } #map { height:48vh; } #panel { overflow:visible; } }
+.pin { width:28px; height:28px; border-radius:50%; background:var(--orange); color:var(--ink); border:2px solid #fff; box-shadow:0 2px 6px #43102f40; font:700 12px/1 system-ui; display:grid; place-items:center; padding:0; min-height:0; }
+.pin.sel { outline:4px solid var(--yellow); }
+.pin.home { background:var(--magenta); color:#fff; }
+@media (max-width:420px) { .start { font-size:.9rem; padding-left:9px; } .start button { min-width:30px; min-height:32px; } .start span.ctl { gap:1px; } }
+@media (max-width:800px) { main { display:block; height:auto; } main { padding:0; } #map { height:56vh; } #panel { overflow:visible; border-radius:0; } #hero { border-radius:0; } #body { border-radius:0; } #mapwrap { margin:28px 18px; } }
 </style>
 </head>
 <body>
 <main>
 <section id="panel">
-  <h1>Where to Meet</h1>
-  <p>Add how many of you start in each city. The list ranks places to meet.</p>
+  <header id="hero">
+    <h1>Where to Meet</h1>
+    <p>Add how many of you start in each city. The list ranks places to meet.</p>
+  </header>
+  <div id="body">
   <div id="starts"></div>
   <h2>Rank by</h2>
   <div class="row" id="rank"></div>
@@ -64,8 +77,9 @@ td a { color:var(--home); }
   <div class="row"><button id="copy">Copy link to this group</button></div>
   <h2>About the numbers</h2>
   <div id="notes"></div>
+  </div>
 </section>
-<div id="map" aria-label="Map of meeting places"></div>
+<div id="mapwrap"><div id="map" aria-label="Map of meeting places"></div><div id="film"><span id="stamp"></span></div></div>
 </main>
 <script src="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js"></script>
 <script>
@@ -139,7 +153,7 @@ function drawMap(results) {
   pins.forEach(p => p.remove()); pins = [];
   const add = (c, node) => pins.push(new maplibregl.Marker({ element: node }).setLngLat([c.lon, c.lat]).addTo(map));
   for (const id in state.group) if (!results.some(r => r.c.id === id))
-    add(city(id), el("div", { className: "pin home", title: city(id).name, textContent: state.group[id] }));
+    add(city(id), el("div", { className: "pin home", title: city(id).name, textContent: "•" }));
   results.forEach((r, i) => {
     const node = el("button", { className: "pin" + (state.group[r.c.id] ? " home" : "") + (selected === r.c.id ? " sel" : ""),
       title: `${i + 1}. ${r.c.name}`, textContent: i + 1, onclick: () => { selected = r.c.id; render(); } });
@@ -205,13 +219,20 @@ async function start() {
   const copy = document.getElementById("copy");
   copy.onclick = async () => { await navigator.clipboard.writeText(location.href); copy.textContent = "Copied"; setTimeout(() => copy.textContent = "Copy link to this group", 1500); };
   window.addEventListener("hashchange", () => { readHash(); render(); });
+  document.getElementById("stamp").textContent = data.built.slice(2).replaceAll("-", " ").replace(/^/, "'");
   notes();
   render();
   map = new maplibregl.Map({ container: "map", style: "https://tiles.openfreemap.org/styles/positron", center: [8.6, 48.6], zoom: 4.4 });
   map.addControl(new maplibregl.NavigationControl({ showCompass: false }));
   map.on("load", () => {
+    for (const l of map.getStyle().layers) {
+      if (l.type === "background") map.setPaintProperty(l.id, "background-color", "#fff6ef");
+      else if (l.type === "fill" && /water/.test(l.id)) map.setPaintProperty(l.id, "fill-color", "#ffad9f");
+      else if (l.type === "fill" && /park|wood|landcover|landuse/.test(l.id)) map.setPaintProperty(l.id, "fill-color", "#ffe7d3");
+      else if (l.type === "line" && /boundary/.test(l.id)) map.setPaintProperty(l.id, "line-color", "#f58fb0");
+    }
     map.addSource("legs", { type: "geojson", data: { type: "FeatureCollection", features: [] } });
-    map.addLayer({ id: "legs", type: "line", source: "legs", paint: { "line-color": ["match", ["get", "kind"], "flight", "#b4442c", "#1f5f7a"], "line-width": 2.5, "line-dasharray": [2, 1] } });
+    map.addLayer({ id: "legs", type: "line", source: "legs", paint: { "line-color": ["match", ["get", "kind"], "flight", "#f26a00", "#c4125f"], "line-width": 3.5, "line-dasharray": [2, 1] } });
     drawMap(Object.values(state.group).length ? ranking().slice(0, SHOW) : []);
   });
   drawMap(Object.values(state.group).length ? ranking().slice(0, SHOW) : []);
