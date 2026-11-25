@@ -1,0 +1,222 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Where to Meet</title>
+<link rel="stylesheet" href="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css">
+<style>
+:root { --bg:#f6f4ef; --card:#fffdf9; --ink:#22303a; --soft:#5d6b74; --line:#ddd7cb; --accent:#b4442c; --accent-ink:#fff; --home:#1f5f7a; }
+@media (prefers-color-scheme: dark) {
+  :root { --bg:#172027; --card:#1f2a32; --ink:#e9e6df; --soft:#a3afb7; --line:#33414b; --accent:#e07a5f; --accent-ink:#1b1410; --home:#7cc0dc; }
+}
+* { box-sizing:border-box; }
+body { margin:0; background:var(--bg); color:var(--ink); font:16px/1.45 system-ui, sans-serif; }
+main { display:grid; grid-template-columns:minmax(340px, 440px) 1fr; height:100vh; }
+#panel { overflow-y:auto; padding:20px 16px 32px; }
+#map { height:100%; min-height:320px; background:var(--line); }
+h1 { font-size:1.6rem; margin:0 0 4px; letter-spacing:-.01em; }
+h2 { font-size:.95rem; margin:20px 0 8px; }
+p { margin:0 0 8px; color:var(--soft); }
+button, a { font:inherit; }
+button { cursor:pointer; color:inherit; background:var(--card); border:1px solid var(--line); border-radius:8px; padding:6px 10px; min-height:36px; }
+button[aria-pressed="true"] { background:var(--accent); border-color:var(--accent); color:var(--accent-ink); }
+:focus-visible { outline:2px solid var(--home); outline-offset:2px; }
+#starts { display:grid; grid-template-columns:repeat(auto-fit, minmax(150px, 1fr)); gap:6px; }
+.start { min-width:0; display:flex; align-items:center; justify-content:space-between; background:var(--card); border:1px solid var(--line); border-radius:8px; padding:4px 4px 4px 8px; }
+.start > span:first-child { min-width:0; overflow:hidden; text-overflow:ellipsis; }
+.start.on { border-color:var(--home); }
+.start span.ctl { display:flex; align-items:center; gap:4px; }
+.start b { min-width:1.2em; text-align:center; font-variant-numeric:tabular-nums; }
+.start button { min-width:36px; padding:0; }
+.row { display:flex; flex-wrap:wrap; gap:6px; }
+ol { list-style:none; margin:0; padding:0; }
+li { border-bottom:1px solid var(--line); }
+li > button { width:100%; text-align:left; background:none; border:0; border-radius:0; padding:10px 0; display:grid; grid-template-columns:2em 1fr auto; gap:6px; align-items:baseline; }
+li .name { font-weight:600; }
+li .num { font-variant-numeric:tabular-nums; white-space:nowrap; text-align:right; }
+li small { color:var(--soft); display:block; font-weight:400; }
+table { width:100%; border-collapse:collapse; font-size:.9rem; margin:0 0 12px; }
+td { padding:4px 8px 4px 0; vertical-align:top; border-top:1px dotted var(--line); }
+td:nth-child(2) { white-space:nowrap; font-variant-numeric:tabular-nums; }
+td a { color:var(--home); }
+#notes { font-size:.85rem; }
+#notes a { color:var(--home); }
+.pin { width:26px; height:26px; border-radius:50%; background:var(--accent); color:var(--accent-ink); border:2px solid var(--card); font:600 12px/1 system-ui; display:grid; place-items:center; padding:0; min-height:0; }
+.pin.sel { outline:3px solid var(--home); }
+.pin.home { background:var(--home); color:var(--card); border-radius:6px; }
+@media (max-width:420px) { .start { font-size:.9rem; } .start button { min-width:30px; } .start span.ctl { gap:1px; } }
+@media (max-width:800px) { main { display:block; height:auto; } #map { height:48vh; } #panel { overflow:visible; } }
+</style>
+</head>
+<body>
+<main>
+<section id="panel">
+  <h1>Where to Meet</h1>
+  <p>Add how many of you start in each city. The list ranks places to meet.</p>
+  <div id="starts"></div>
+  <h2>Rank by</h2>
+  <div class="row" id="rank"></div>
+  <h2>Travel by</h2>
+  <div class="row" id="modes"></div>
+  <h2 id="resultsTitle">Best places</h2>
+  <ol id="list"></ol>
+  <div class="row"><button id="copy">Copy link to this group</button></div>
+  <h2>About the numbers</h2>
+  <div id="notes"></div>
+</section>
+<div id="map" aria-label="Map of meeting places"></div>
+</main>
+<script src="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js"></script>
+<script>
+const RANKS = { total: "Shortest total", fair: "Fairest", price: "Cheapest (estimate)" };
+const MODES = { both: "Train or plane", train: "Train only" };
+const SHOW = 15, PLANE_MUST_SAVE = 30;
+let data, map, pins = [], selected = null;
+const state = { group: {}, rank: "total", mode: "both" };
+
+const el = (tag, props = {}, ...kids) => { const n = Object.assign(document.createElement(tag), props); n.append(...kids); return n; };
+const hm = m => m === 0 ? "at home" : `${Math.floor(m / 60)}h${String(m % 60).padStart(2, "0")}`;
+const city = id => data.cities.find(c => c.id === id);
+
+function readHash() {
+  const q = new URLSearchParams(location.hash.slice(1));
+  state.group = {};
+  for (const c of data.cities.filter(c => c.start)) {
+    const n = Math.min(20, Math.max(0, parseInt(q.get(c.id), 10) || 0));
+    if (n) state.group[c.id] = n;
+  }
+  if (!Object.keys(state.group).length) data.cities.filter(c => c.start).forEach(c => state.group[c.id] = 1);
+  if (RANKS[q.get("rank")]) state.rank = q.get("rank");
+  if (MODES[q.get("mode")]) state.mode = q.get("mode");
+}
+function writeHash() {
+  const q = new URLSearchParams({ ...state.group, rank: state.rank, mode: state.mode });
+  history.replaceState(null, "", "#" + q);
+}
+
+function option(from, to) {
+  if (from === to) return { min: 0, est: 0, kind: "home" };
+  const t = data.trips[from][to], opts = [];
+  if (t.train) opts.push({ ...t.train, kind: "train" });
+  if (t.flight && state.mode === "both") opts.push({ ...t.flight, kind: "flight" });
+  const score = o => state.rank === "price" ? o.est : o.min + (o.kind === "flight" && t.train ? PLANE_MUST_SAVE : 0);
+  return opts.sort((a, b) => score(a) - score(b))[0] || null;
+}
+function ranking() {
+  const people = Object.entries(state.group), out = [];
+  for (const c of data.cities) {
+    const legs = people.map(([id, n]) => ({ id, n, o: option(id, c.id) }));
+    if (legs.some(l => !l.o)) continue;
+    out.push({ c, legs,
+      total: legs.reduce((s, l) => s + l.n * l.o.min, 0),
+      price: legs.reduce((s, l) => s + l.n * l.o.est, 0),
+      max: Math.max(...legs.map(l => l.o.min)) });
+  }
+  const keys = { total: ["total", "max"], fair: ["max", "total"], price: ["price", "total"] }[state.rank];
+  return out.sort((a, b) => a[keys[0]] - b[keys[0]] || a[keys[1]] - b[keys[1]]);
+}
+
+function detail(r) {
+  const t = el("table");
+  for (const l of r.legs) {
+    const how = l.o.kind === "home" ? "" : l.o.kind === "flight" ? `plane ${l.o.via}` : `train, ${l.o.changes} change${l.o.changes === 1 ? "" : "s"}`;
+    const price = l.o.kind === "home" ? "" : l.o.fare ? `€${l.o.fare[0]} to €${l.o.fare[1]}` : `about €${l.o.est}`;
+    const cell = el("td", {}, how, how ? el("br") : "", price, price ? " · " : "");
+    if (l.o.kind !== "home") {
+      const a = city(l.id).name, b = r.c.name;
+      cell.append(el("a", { target: "_blank", rel: "noopener", textContent: "check live",
+        href: l.o.kind === "flight" ? `https://www.google.com/travel/flights?q=${encodeURIComponent(`Flights from ${l.o.via.split("-")[0]} to ${l.o.via.split("-")[1]}`)}`
+                                    : `https://www.rome2rio.com/map/${encodeURIComponent(a)}/${encodeURIComponent(b)}` }));
+    }
+    t.append(el("tr", {}, el("td", {}, (l.n > 1 ? l.n + " × " : "") + city(l.id).name), el("td", {}, hm(l.o.min)), cell));
+  }
+  return t;
+}
+
+function drawMap(results) {
+  if (!map) return;
+  pins.forEach(p => p.remove()); pins = [];
+  const add = (c, node) => pins.push(new maplibregl.Marker({ element: node }).setLngLat([c.lon, c.lat]).addTo(map));
+  for (const id in state.group) if (!results.some(r => r.c.id === id))
+    add(city(id), el("div", { className: "pin home", title: city(id).name, textContent: state.group[id] }));
+  results.forEach((r, i) => {
+    const node = el("button", { className: "pin" + (state.group[r.c.id] ? " home" : "") + (selected === r.c.id ? " sel" : ""),
+      title: `${i + 1}. ${r.c.name}`, textContent: i + 1, onclick: () => { selected = r.c.id; render(); } });
+    add(r.c, node);
+  });
+  const to = selected && results.find(r => r.c.id === selected);
+  const lines = to ? to.legs.filter(l => l.o.kind !== "home").map(l => ({ type: "Feature",
+    properties: { kind: l.o.kind }, geometry: { type: "LineString",
+    coordinates: [[city(l.id).lon, city(l.id).lat], [to.c.lon, to.c.lat]] } })) : [];
+  map.getSource("legs")?.setData({ type: "FeatureCollection", features: lines });
+}
+
+function render() {
+  writeHash();
+  document.querySelectorAll(".start").forEach(n => {
+    const v = state.group[n.dataset.id] || 0;
+    n.classList.toggle("on", v > 0); n.querySelector("b").textContent = v;
+  });
+  for (const [box, key] of [["rank", "rank"], ["modes", "mode"]])
+    document.querySelectorAll(`#${box} button`).forEach(b => b.setAttribute("aria-pressed", b.dataset.v === state[key]));
+  const list = document.getElementById("list");
+  list.replaceChildren();
+  const n = Object.values(state.group).reduce((a, b) => a + b, 0);
+  document.getElementById("resultsTitle").textContent = n ? `Best places for ${n}` : "Add at least one person";
+  const results = n ? ranking().slice(0, SHOW) : [];
+  if (selected && !results.some(r => r.c.id === selected)) selected = null;
+  results.forEach((r, i) => {
+    const head = el("button", { onclick: () => { selected = selected === r.c.id ? null : r.c.id; render(); } },
+      el("span", { textContent: i + 1 }),
+      el("span", { className: "name" }, r.c.name, el("small", { textContent: `longest trip ${hm(r.max)}, about €${r.price} in total` })),
+      el("span", { className: "num" }, hm(r.total), el("small", { textContent: "all trips" })));
+    head.setAttribute("aria-expanded", selected === r.c.id);
+    const li = el("li", {}, head);
+    if (selected === r.c.id) li.append(detail(r));
+    list.append(li);
+  });
+  drawMap(results);
+}
+
+function notes() {
+  const box = document.getElementById("notes");
+  const link = (t, h) => el("a", { textContent: t, href: h, target: "_blank", rel: "noopener" });
+  box.append(
+    el("p", {}, `Times are one way. Trains show the fastest connection found for ${data.travel_date}, from city centre or main station, and the same time is used in both directions. Timetable data: `, link("Transitous and its sources", "https://transitous.org/sources/"), "."),
+    el("p", {}, `Plane times are estimates: the way to the airport (six of them set by hand: Lille, Luxembourg, Prague, Milan Malpensa, Milan Linate, Venice), 90 minutes before departure, flight time from distance, 30 minutes after landing, and the way into town. A plane is suggested only if it saves at least 30 minutes. Only direct routes that carried passengers in ${data.eurostat_year} are used (`, link("Eurostat", "https://ec.europa.eu/eurostat/databrowser/view/avia_par_de/default/table"), "), so some may have changed. Airports: ", link("OurAirports", "https://ourairports.com/data/"), "."),
+    el("p", {}, "Prices marked “about” are rough guesses from distance, not fares. Price ranges on French routes come from ", link("SNCF open data", "https://ressources.data.sncf.com/explore/dataset/tarifs-tgv-inoui-ouigo/"), " (ODbL); their midpoint counts in the ranking. Use “check live” before deciding."),
+    el("p", {}, `Data built ${data.built}. Non-commercial. Your group is stored only in the link, not on a server. `, link("Support Transitous", "https://transitous.org/"), "."));
+}
+
+async function start() {
+  data = await (await fetch("data/travel.json")).json();
+  readHash();
+  const starts = document.getElementById("starts");
+  for (const c of data.cities.filter(c => c.start)) {
+    const step = d => { const v = Math.max(0, Math.min(20, (state.group[c.id] || 0) + d)); if (v) state.group[c.id] = v; else delete state.group[c.id]; render(); };
+    const minus = el("button", { textContent: "−", onclick: () => step(-1) }), plus = el("button", { textContent: "+", onclick: () => step(1) });
+    minus.setAttribute("aria-label", `One fewer from ${c.name}`); plus.setAttribute("aria-label", `One more from ${c.name}`);
+    const box = el("div", { className: "start" }, el("span", { textContent: c.name }), el("span", { className: "ctl" }, minus, el("b"), plus));
+    box.dataset.id = c.id; starts.append(box);
+  }
+  for (const [box, opts, key] of [["rank", RANKS, "rank"], ["modes", MODES, "mode"]])
+    for (const v in opts) { const b = el("button", { textContent: opts[v], onclick: () => { state[key] = v; render(); } }); b.dataset.v = v; document.getElementById(box).append(b); }
+  const copy = document.getElementById("copy");
+  copy.onclick = async () => { await navigator.clipboard.writeText(location.href); copy.textContent = "Copied"; setTimeout(() => copy.textContent = "Copy link to this group", 1500); };
+  window.addEventListener("hashchange", () => { readHash(); render(); });
+  notes();
+  render();
+  map = new maplibregl.Map({ container: "map", style: "https://tiles.openfreemap.org/styles/positron", center: [8.6, 48.6], zoom: 4.4 });
+  map.addControl(new maplibregl.NavigationControl({ showCompass: false }));
+  map.on("load", () => {
+    map.addSource("legs", { type: "geojson", data: { type: "FeatureCollection", features: [] } });
+    map.addLayer({ id: "legs", type: "line", source: "legs", paint: { "line-color": ["match", ["get", "kind"], "flight", "#b4442c", "#1f5f7a"], "line-width": 2.5, "line-dasharray": [2, 1] } });
+    drawMap(Object.values(state.group).length ? ranking().slice(0, SHOW) : []);
+  });
+  drawMap(Object.values(state.group).length ? ranking().slice(0, SHOW) : []);
+}
+start();
+</script>
+</body>
+</html>
